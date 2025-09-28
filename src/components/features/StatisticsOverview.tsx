@@ -151,7 +151,7 @@ export function StatisticsOverview({ launches }: StatisticsOverviewProps) {
                         <CardContent>
                             <div className="space-y-3">
                                 {topRockets.map(([rocketId, count]) => (
-                                    <div key={rocketId} className="flex items-center justify-between">
+                                    <div key={rocketId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
                                         <div className="flex items-center gap-3">
                                             <div className="w-2 h-2 rounded-full bg-primary" />
                                             <span className="text-sm font-medium truncate">{rocketId}</span>
