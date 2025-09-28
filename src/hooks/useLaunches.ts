@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Launch, LaunchFilters } from '@/types/spacex';
+import axios from 'axios';
 
 export function useLaunches(filters: LaunchFilters, favorites?: string[], sortOrder: 'desc' | 'asc' = 'desc') {
     const [launches, setLaunches] = useState<Launch[]>([]);
@@ -7,38 +8,25 @@ export function useLaunches(filters: LaunchFilters, favorites?: string[], sortOr
     const [error, setError] = useState<string | null>(null);
 
     const fetchLaunches = useCallback(async (retryCount = 0) => {
-        const controller = new AbortController();
-
         try {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('https://api.spacexdata.com/v4/launches', {
-                signal: controller.signal,
+            const response = await axios.get<Launch[]>('https://api.spacexdata.com/v4/launches', {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data: Launch[] = await response.json();
-            setLaunches(data || []);
-        } catch (err) {
-            if (controller.signal.aborted) {
-                return;
-            }
+            setLaunches(response.data || []);
+        } catch (err: unknown) {
             let errorMessage = 'Failed to fetch launches';
-            if (err instanceof Error) {
-                if (err.name === 'AbortError') {
-                    return;
-                } else if (err.message.includes('Failed to fetch')) {
+            if (typeof err === 'object' && err !== null) {
+                const maybeError = err as { code?: string; message?: string };
+                if (maybeError.code === 'ERR_NETWORK') {
                     errorMessage = 'Network error - please check your connection and try again';
-                } else {
-                    errorMessage = err.message;
+                } else if (typeof maybeError.message === 'string') {
+                    errorMessage = maybeError.message;
                 }
             }
             if (retryCount < 2 && (errorMessage.includes('Network') || errorMessage.includes('Failed to fetch'))) {
@@ -51,9 +39,6 @@ export function useLaunches(filters: LaunchFilters, favorites?: string[], sortOr
         } finally {
             setLoading(false);
         }
-        return () => {
-            controller.abort();
-        };
     }, []);
 
     useEffect(() => {
